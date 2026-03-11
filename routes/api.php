@@ -6,11 +6,23 @@ use App\Http\Responses\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return ApiResponse::success(new UserResource($request->user()));
-})->middleware('auth:sanctum');
-
+/*
+|--------------------------------------------------------------------------
+| Guest (unauthenticated) routes
+|--------------------------------------------------------------------------
+*/
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/verify-two-factor', [AuthController::class, 'verifyTwoFactor']);
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
-Route::post('/password/change', [AuthController::class, 'changePassword'])->middleware('auth:sanctum');
+
+/*
+|--------------------------------------------------------------------------
+| Authenticated routes
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth:sanctum')->group(function (): void {
+    Route::get('/user', function (Request $request) {
+        return ApiResponse::success(new UserResource($request->user()));
+    });
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/password/change', [AuthController::class, 'changePassword']);
+});
