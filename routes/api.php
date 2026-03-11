@@ -13,3 +13,4 @@ Route::get('/user', function (Request $request) {
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/verify-two-factor', [AuthController::class, 'verifyTwoFactor']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+Route::post('/password/change', [AuthController::class, 'changePassword'])->middleware('auth:sanctum');

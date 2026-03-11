@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\VerifyTwoFactorRequest;
 use App\Http\Resources\UserResource;
@@ -108,5 +109,17 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return ApiResponse::success(null, 'Logged out');
+    }
+
+    /**
+     * Change the authenticated user's password.
+     */
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $user->password = $request->validated('password');
+        $user->save();
+
+        return ApiResponse::success(null, 'Password changed successfully');
     }
 }
