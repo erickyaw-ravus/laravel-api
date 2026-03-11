@@ -1,59 +1,100 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Ravus
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel application using [Laravel Sail](https://laravel.com/docs/sail) for local development with Docker.
 
-## About Laravel
+## Prerequisites
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Docker Desktop (or Docker Engine + Docker Compose)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## First-time setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. **Clone and install dependencies**
 
-## Learning Laravel
+    ```bash
+    composer install
+    ```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+2. **Copy environment file and generate key**
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
 
-## Laravel Sponsors
+3. **Start Sail** (builds images and starts all services, including Mailpit):
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+    ```bash
+    ./vendor/bin/sail up -d
+    ```
 
-### Premium Partners
+4. **Run migrations**
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+    ```bash
+    ./vendor/bin/sail artisan migrate
+    ```
 
-## Contributing
+The app is available at `http://localhost` (or the port set by `APP_PORT` in `.env`).
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## Sail with Mailpit
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Sail is configured with **Mailpit** so all outgoing mail is captured locally instead of being sent to real addresses.
 
-## Security Vulnerabilities
+- **SMTP (for the app):** `mailpit:1025` (inside Docker)  
+  In `.env`, Mailpit is already set when using Sail:
+    - `MAIL_HOST=mailpit`
+    - `MAIL_PORT=1025`
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- **Web UI:** open **http://localhost:8025** (or the port from `FORWARD_MAILPIT_DASHBOARD_PORT` in `.env`) to view and inspect sent emails.
 
-## License
+Useful Sail commands:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+# Start all services (app, MySQL, Mailpit)
+./vendor/bin/sail up -d
+
+# Stop services
+./vendor/bin/sail down
+
+# View logs
+./vendor/bin/sail logs -f
+```
+
+Optional `.env` overrides for Mailpit ports (if the defaults clash with other tools):
+
+- `FORWARD_MAILPIT_PORT=1025` — SMTP port on the host (default 1025)
+- `FORWARD_MAILPIT_DASHBOARD_PORT=8025` — Web UI port (default 8025)
+
+---
+
+## Testing
+
+Tests run inside the Sail container so they use the same MySQL and environment as development, with test-specific overrides from `phpunit.xml` (e.g. `APP_ENV=testing`, `DB_DATABASE=testing`, `MAIL_MAILER=array`).
+
+**Run all tests**
+
+```bash
+./vendor/bin/sail test
+```
+
+**Run a specific test suite**
+
+```bash
+./vendor/bin/sail test --testsuite=Unit
+./vendor/bin/sail test --testsuite=Feature
+```
+
+**Run a single test file**
+
+```bash
+./vendor/bin/sail test tests/Feature/Auth/LoginTest.php
+```
+
+**Run with coverage** (optional)
+
+```bash
+./vendor/bin/sail test --coverage
+```
+
+In tests, mail is sent to the `array` driver (`MAIL_MAILER=array` in `phpunit.xml`), so nothing hits Mailpit during tests. Use Laravel’s `Mail` facade and assertions like `Mail::assertSent()` to verify that mails would be sent. Mailpit is for manual checking in the browser during development.
