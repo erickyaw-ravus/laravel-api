@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 */
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/verify-two-factor', [AuthController::class, 'verifyTwoFactor']);
+Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
+Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 
 /*
 |--------------------------------------------------------------------------
