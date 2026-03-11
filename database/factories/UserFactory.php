@@ -30,6 +30,8 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'two_factor_enabled' => true,
+            'two_factor_method' => 'email',
         ];
     }
 
@@ -40,6 +42,17 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that two-factor authentication is disabled for this user.
+     */
+    public function twoFactorDisabled(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'two_factor_enabled' => false,
+            'two_factor_method' => null,
         ]);
     }
 }
