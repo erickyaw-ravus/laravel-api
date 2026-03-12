@@ -41,5 +41,4 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('roles', [RoleController::class, 'store']);
     });
     Route::patch('users/{user}', [UserController::class, 'update']);
-    Route::put('users/{user}', [UserController::class, 'update']);
 });
