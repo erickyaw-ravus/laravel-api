@@ -14,9 +14,11 @@ use App\Mail\TwoFactorCodeMail;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -41,6 +43,10 @@ class AuthController extends Controller
         $user = User::where('email', $request->validated('email'))->first();
 
         if (!$user || !Hash::check($request->validated('password'), $user->password)) {
+            Log::warning('Failed login attempt', [
+                'email' => $request->validated('email'),
+                'ip' => $request->ip(),
+            ]);
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
@@ -49,7 +55,15 @@ class AuthController extends Controller
         if ($user->two_factor_enabled && $user->two_factor_method === 'email') {
             $code = (string) random_int(100000, 999999);
             Cache::put(self::TWO_FACTOR_CACHE_PREFIX . $user->id, $code, self::TWO_FACTOR_CODE_TTL_SECONDS);
-            Mail::to($user)->send(new TwoFactorCodeMail($user, $code));
+            try {
+                Mail::to($user)->send(new TwoFactorCodeMail($user, $code));
+            } catch (\Throwable $e) {
+                Log::error('Failed to send two-factor code email', [
+                    'user_id' => $user->id,
+                    'message' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
 
             $twoFactorToken = encrypt([
                 'user_id' => $user->id,
@@ -77,25 +91,32 @@ class AuthController extends Controller
     {
         try {
             $payload = decrypt($request->validated('two_factor_token'));
-        } catch (\Illuminate\Contracts\Encryption\DecryptException) {
+        } catch (DecryptException $e) {
+            Log::warning('Two-factor verification failed: invalid or expired token', [
+                'message' => $e->getMessage(),
+            ]);
             return ApiResponse::error('Invalid or expired verification token.', Response::HTTP_BAD_REQUEST);
         }
 
         if (!is_array($payload) || !isset($payload['user_id'], $payload['expires_at'])) {
+            Log::warning('Two-factor verification failed: invalid token payload');
             return ApiResponse::error('Invalid verification token.', Response::HTTP_BAD_REQUEST);
         }
 
         if ($payload['expires_at'] < time()) {
+            Log::warning('Two-factor verification failed: token expired', ['user_id' => $payload['user_id']]);
             return ApiResponse::error('Verification token has expired. Please log in again.', Response::HTTP_BAD_REQUEST);
         }
 
         $user = User::find($payload['user_id']);
         if (!$user) {
+            Log::warning('Two-factor verification failed: user not found', ['user_id' => $payload['user_id']]);
             return ApiResponse::error('User not found.', Response::HTTP_BAD_REQUEST);
         }
 
         $cachedCode = Cache::get(self::TWO_FACTOR_CACHE_PREFIX . $user->id);
         if ($cachedCode === null || $cachedCode !== $request->validated('code')) {
+            Log::warning('Two-factor verification failed: invalid or expired code', ['user_id' => $user->id]);
             return ApiResponse::error('Invalid or expired verification code.', Response::HTTP_BAD_REQUEST);
         }
 
@@ -129,7 +150,16 @@ class AuthController extends Controller
             $frontendUrl = rtrim(config('app.frontend_url'), '/');
             $resetLink = $frontendUrl . '/reset-password?token=' . urlencode($token);
 
-            Mail::to($user)->send(new PasswordResetMail($user, $resetLink));
+            try {
+                Mail::to($user)->send(new PasswordResetMail($user, $resetLink));
+                Log::info('Password reset requested', ['user_id' => $user->id]);
+            } catch (\Throwable $e) {
+                Log::error('Failed to send password reset email', [
+                    'user_id' => $user->id,
+                    'message' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
         }
 
         return ApiResponse::success(null, 'If that email is registered, we have sent a password reset link.');
@@ -160,6 +190,8 @@ class AuthController extends Controller
 
         Cache::forget(self::PASSWORD_RESET_CACHE_PREFIX . $request->validated('token'));
 
+        Log::info('Password reset completed', ['user_id' => $user->id]);
+
         return ApiResponse::success(null, 'Password has been reset. You can now log in with your new password.');
     }
 
@@ -181,6 +213,8 @@ class AuthController extends Controller
         $user = $request->user();
         $user->password = $request->validated('password');
         $user->save();
+
+        Log::info('Password changed', ['user_id' => $user->id]);
 
         return ApiResponse::success(null, 'Password changed successfully');
     }

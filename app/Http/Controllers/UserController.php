@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class UserController extends Controller
@@ -46,6 +47,11 @@ class UserController extends Controller
         $user = User::create($data);
         $user->assignRole('User');
 
+        Log::info('User created', [
+            'user_id' => $user->id,
+            'created_by' => $request->user()->id,
+        ]);
+
         return ApiResponse::success(new UserResource($user), 'User created', Response::HTTP_CREATED);
     }
 
@@ -69,6 +75,11 @@ class UserController extends Controller
 
         $user->fill($data);
         $user->save();
+
+        Log::info('User updated', [
+            'user_id' => $user->id,
+            'updated_by' => $request->user()->id,
+        ]);
 
         return ApiResponse::success(new UserResource($user), 'User updated');
     }

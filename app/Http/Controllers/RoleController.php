@@ -7,6 +7,7 @@ use App\Http\Resources\RoleResource;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -33,6 +34,12 @@ class RoleController extends Controller
         $role = Role::create([
             'name' => $request->validated('name'),
             'guard_name' => $guardName,
+        ]);
+
+        Log::info('Role created', [
+            'role_id' => $role->id,
+            'role_name' => $role->name,
+            'created_by' => $request->user()->id,
         ]);
 
         return ApiResponse::success(new RoleResource($role), 'Role created', Response::HTTP_CREATED);
