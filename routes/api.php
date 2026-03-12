@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
@@ -34,6 +35,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('users', [UserController::class, 'index']);
         Route::get('users/{user}', [UserController::class, 'show']);
         Route::post('users', [UserController::class, 'store']);
+
+        // Role management: list (no pagination), create
+        Route::get('roles', [RoleController::class, 'index']);
+        Route::post('roles', [RoleController::class, 'store']);
     });
     Route::patch('users/{user}', [UserController::class, 'update']);
     Route::put('users/{user}', [UserController::class, 'update']);
