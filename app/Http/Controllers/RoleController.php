@@ -5,42 +5,32 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreRoleRequest;
 use App\Http\Resources\RoleResource;
 use App\Http\Responses\ApiResponse;
+use App\Services\RoleService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\Response;
 
 class RoleController extends Controller
 {
+    public function __construct(
+        private readonly RoleService $roleService
+    ) {}
+
     /**
-     * List all roles (no pagination). Super Admin only.
-     *
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     * List all roles (no pagination).
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        $roles = Role::query()->orderBy('id')->get();
+        $roles = $this->roleService->list();
 
         return ApiResponse::success(RoleResource::collection($roles));
     }
 
     /**
-     * Create a new role. Super Admin only.
+     * Create a new role.
      */
     public function store(StoreRoleRequest $request): JsonResponse
     {
-        $guardName = config('auth.defaults.guard', 'web');
-        $role = Role::create([
-            'name' => $request->validated('name'),
-            'guard_name' => $guardName,
-        ]);
-
-        Log::info('Role created', [
-            'role_id' => $role->id,
-            'role_name' => $role->name,
-            'created_by' => $request->user()->id,
-        ]);
+        $role = $this->roleService->store($request->validated('name'), $request->user());
 
         return ApiResponse::success(new RoleResource($role), 'Role created', Response::HTTP_CREATED);
     }
