@@ -17,7 +17,7 @@ class ForgotPasswordTest extends TestCase
         Mail::fake();
         $user = User::factory()->twoFactorDisabled()->create(['email' => 'user@example.com']);
 
-        $response = $this->postJson('/api/password/forgot', [
+        $response = $this->postJson(route('password.forgot'), [
             'email' => 'user@example.com',
         ]);
 
@@ -39,7 +39,7 @@ class ForgotPasswordTest extends TestCase
     {
         Mail::fake();
 
-        $response = $this->postJson('/api/password/forgot', [
+        $response = $this->postJson(route('password.forgot'), [
             'email' => 'unknown@example.com',
         ]);
 
@@ -54,7 +54,7 @@ class ForgotPasswordTest extends TestCase
 
     public function test_forgot_password_returns_422_when_email_invalid(): void
     {
-        $response = $this->postJson('/api/password/forgot', [
+        $response = $this->postJson(route('password.forgot'), [
             'email' => 'not-an-email',
         ]);
 
@@ -64,7 +64,7 @@ class ForgotPasswordTest extends TestCase
 
     public function test_forgot_password_returns_422_when_email_missing(): void
     {
-        $response = $this->postJson('/api/password/forgot', []);
+        $response = $this->postJson(route('password.forgot'), []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email']);

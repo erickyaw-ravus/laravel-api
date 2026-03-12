@@ -19,7 +19,7 @@ class ChangePasswordTest extends TestCase
         $token = $user->createToken('test-device')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson('/api/password/change', [
+            ->postJson(route('password.change'), [
                 'current_password' => 'current-secret',
                 'password' => 'new-secret-123',
                 'password_confirmation' => 'new-secret-123',
@@ -43,7 +43,7 @@ class ChangePasswordTest extends TestCase
         $token = $user->createToken('test-device')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson('/api/password/change', [
+            ->postJson(route('password.change'), [
                 'current_password' => 'wrong-password',
                 'password' => 'new-secret-123',
                 'password_confirmation' => 'new-secret-123',
@@ -61,7 +61,7 @@ class ChangePasswordTest extends TestCase
         $token = $user->createToken('test-device')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson('/api/password/change', [
+            ->postJson(route('password.change'), [
                 'current_password' => 'current-secret',
                 'password' => 'new-secret-123',
                 'password_confirmation' => 'different',
@@ -73,7 +73,7 @@ class ChangePasswordTest extends TestCase
 
     public function test_change_password_returns_401_when_unauthenticated(): void
     {
-        $response = $this->postJson('/api/password/change', [
+        $response = $this->postJson(route('password.change'), [
             'current_password' => 'current-secret',
             'password' => 'new-secret-123',
             'password_confirmation' => 'new-secret-123',

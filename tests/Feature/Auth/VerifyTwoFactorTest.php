@@ -24,7 +24,7 @@ class VerifyTwoFactorTest extends TestCase
             'two_factor_method' => 'email',
         ]);
 
-        $loginResponse = $this->postJson('/api/login', [
+        $loginResponse = $this->postJson(route('login'), [
             'email' => 'user@example.com',
             'password' => 'password123',
         ]);
@@ -43,7 +43,7 @@ class VerifyTwoFactorTest extends TestCase
         }
         $this->assertSame(6, strlen($sentCode));
 
-        $response = $this->postJson('/api/login/verify-two-factor', [
+        $response = $this->postJson(route('login.verify-two-factor'), [
             'two_factor_token' => $twoFactorToken,
             'code' => $sentCode,
         ]);
@@ -79,14 +79,14 @@ class VerifyTwoFactorTest extends TestCase
             'two_factor_method' => 'email',
         ]);
 
-        $loginResponse = $this->postJson('/api/login', [
+        $loginResponse = $this->postJson(route('login'), [
             'email' => 'user@example.com',
             'password' => 'password123',
         ]);
 
         $twoFactorToken = $loginResponse->json('data.two_factor_token');
 
-        $response = $this->postJson('/api/login/verify-two-factor', [
+        $response = $this->postJson(route('login.verify-two-factor'), [
             'two_factor_token' => $twoFactorToken,
             'code' => '000000',
         ]);
@@ -112,7 +112,7 @@ class VerifyTwoFactorTest extends TestCase
 
         Cache::put('2fa:' . $user->id, '123456', 600);
 
-        $response = $this->postJson('/api/login/verify-two-factor', [
+        $response = $this->postJson(route('login.verify-two-factor'), [
             'two_factor_token' => $expiredToken,
             'code' => '123456',
         ]);
@@ -126,7 +126,7 @@ class VerifyTwoFactorTest extends TestCase
 
     public function test_verify_two_factor_fails_with_invalid_token(): void
     {
-        $response = $this->postJson('/api/login/verify-two-factor', [
+        $response = $this->postJson(route('login.verify-two-factor'), [
             'two_factor_token' => 'invalid-token',
             'code' => '123456',
         ]);
@@ -139,7 +139,7 @@ class VerifyTwoFactorTest extends TestCase
 
     public function test_verify_two_factor_fails_with_missing_fields(): void
     {
-        $response = $this->postJson('/api/login/verify-two-factor', []);
+        $response = $this->postJson(route('login.verify-two-factor'), []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['two_factor_token', 'code']);
@@ -153,7 +153,7 @@ class VerifyTwoFactorTest extends TestCase
             'expires_at' => now()->addMinutes(10)->timestamp,
         ]);
 
-        $response = $this->postJson('/api/login/verify-two-factor', [
+        $response = $this->postJson(route('login.verify-two-factor'), [
             'two_factor_token' => $token,
             'code' => 'abc',
         ]);

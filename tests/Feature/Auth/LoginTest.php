@@ -18,7 +18,7 @@ class LoginTest extends TestCase
             'password' => 'password123',
         ]);
 
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson(route('login'), [
             'email' => 'user@example.com',
             'password' => 'password123',
         ]);
@@ -54,7 +54,7 @@ class LoginTest extends TestCase
             'two_factor_method' => 'email',
         ]);
 
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson(route('login'), [
             'email' => 'user@example.com',
             'password' => 'password123',
         ]);
@@ -86,7 +86,7 @@ class LoginTest extends TestCase
             'password' => 'password123',
         ]);
 
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson(route('login'), [
             'email' => 'user@example.com',
             'password' => 'wrong-password',
         ]);
@@ -97,7 +97,7 @@ class LoginTest extends TestCase
 
     public function test_login_fails_with_missing_credentials(): void
     {
-        $response = $this->postJson('/api/login', []);
+        $response = $this->postJson(route('login'), []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email', 'password']);
@@ -105,7 +105,7 @@ class LoginTest extends TestCase
 
     public function test_login_fails_with_invalid_email_format(): void
     {
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson(route('login'), [
             'email' => 'not-an-email',
             'password' => 'password123',
         ]);

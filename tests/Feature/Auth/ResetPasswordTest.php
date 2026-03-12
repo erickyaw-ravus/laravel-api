@@ -20,7 +20,7 @@ class ResetPasswordTest extends TestCase
         $token = 'valid-reset-token-64-chars-long-enough-to-match-length-requirement';
         Cache::put(self::PASSWORD_RESET_PREFIX . $token, ['user_id' => $user->id], 3600);
 
-        $response = $this->postJson('/api/password/reset', [
+        $response = $this->postJson(route('password.reset'), [
             'token' => $token,
             'password' => 'new-secret-123',
             'password_confirmation' => 'new-secret-123',
@@ -41,7 +41,7 @@ class ResetPasswordTest extends TestCase
     {
         $user = User::factory()->twoFactorDisabled()->create(['email' => 'user@example.com']);
 
-        $response = $this->postJson('/api/password/reset', [
+        $response = $this->postJson(route('password.reset'), [
             'token' => 'invalid-token',
             'password' => 'new-secret-123',
             'password_confirmation' => 'new-secret-123',
@@ -64,7 +64,7 @@ class ResetPasswordTest extends TestCase
             'expires_at' => now()->subMinutes(1)->timestamp,
         ], 3600);
 
-        $response = $this->postJson('/api/password/reset', [
+        $response = $this->postJson(route('password.reset'), [
             'token' => $token,
             'password' => 'new-secret-123',
             'password_confirmation' => 'new-secret-123',
@@ -85,7 +85,7 @@ class ResetPasswordTest extends TestCase
         $token = 'valid-reset-token-64-chars-long-enough-to-match-length-requirement';
         Cache::put(self::PASSWORD_RESET_PREFIX . $token, ['user_id' => 99999], 3600);
 
-        $response = $this->postJson('/api/password/reset', [
+        $response = $this->postJson(route('password.reset'), [
             'token' => $token,
             'password' => 'new-secret-123',
             'password_confirmation' => 'new-secret-123',
@@ -104,7 +104,7 @@ class ResetPasswordTest extends TestCase
         $token = 'valid-reset-token-64-chars-long-enough-to-match-length-requirement';
         Cache::put(self::PASSWORD_RESET_PREFIX . $token, ['user_id' => $user->id], 3600);
 
-        $response = $this->postJson('/api/password/reset', [
+        $response = $this->postJson(route('password.reset'), [
             'token' => $token,
             'password' => 'new-secret-123',
             'password_confirmation' => 'different',
@@ -116,7 +116,7 @@ class ResetPasswordTest extends TestCase
 
     public function test_reset_password_returns_422_when_token_missing(): void
     {
-        $response = $this->postJson('/api/password/reset', [
+        $response = $this->postJson(route('password.reset'), [
             'password' => 'new-secret-123',
             'password_confirmation' => 'new-secret-123',
         ]);

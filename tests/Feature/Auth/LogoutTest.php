@@ -16,7 +16,7 @@ class LogoutTest extends TestCase
         $token = $user->createToken('test-device')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson('/api/logout');
+            ->postJson(route('logout'));
 
         $response->assertStatus(200)
             ->assertJson([
@@ -27,7 +27,7 @@ class LogoutTest extends TestCase
 
     public function test_logout_returns_401_when_unauthenticated(): void
     {
-        $response = $this->postJson('/api/logout');
+        $response = $this->postJson(route('logout'));
 
         $response->assertStatus(401)
             ->assertJson([

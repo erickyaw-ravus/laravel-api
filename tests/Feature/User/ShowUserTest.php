@@ -11,7 +11,7 @@ class ShowUserTest extends UserManagementTestCase
         $user = User::factory()->create();
         $user->assignRole('User');
 
-        $response = $this->getJson('/api/users/' . $user->id);
+        $response = $this->getJson(route('users.show', $user));
 
         $response->assertStatus(401);
     }
@@ -23,7 +23,7 @@ class ShowUserTest extends UserManagementTestCase
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson('/api/users/' . $user->id);
+            ->getJson(route('users.show', $user));
 
         $response->assertStatus(403);
     }
@@ -35,7 +35,7 @@ class ShowUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson('/api/users/' . $user->id);
+            ->getJson(route('users.show', $user));
 
         $response->assertStatus(200)
             ->assertJsonStructure([

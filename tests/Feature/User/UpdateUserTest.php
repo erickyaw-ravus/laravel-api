@@ -11,7 +11,7 @@ class UpdateUserTest extends UserManagementTestCase
         $user = User::factory()->create();
         $user->assignRole('User');
 
-        $response = $this->patchJson('/api/users/' . $user->id, ['name' => 'Updated Name']);
+        $response = $this->patchJson(route('users.update', $user), ['name' => 'Updated Name']);
 
         $response->assertStatus(401);
     }
@@ -23,7 +23,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson('/api/users/' . $otherUser->id, ['name' => 'Updated Name']);
+            ->patchJson(route('users.update', $otherUser), ['name' => 'Updated Name']);
 
         $response->assertStatus(403);
     }
@@ -35,7 +35,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $user->createToken('test')->plainTextToken;
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson('/api/users/' . $user->id, [
+            ->patchJson(route('users.update', $user), [
                 'name' => 'New Name',
                 'email' => 'newemail@example.com',
             ]);
@@ -64,7 +64,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $user->createToken('test')->plainTextToken;
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson('/api/users/' . $user->id, ['role' => 'Super Admin']);
+            ->patchJson(route('users.update', $user), ['role' => 'Super Admin']);
 
         $response->assertStatus(200);
         $user->refresh();
@@ -79,7 +79,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson('/api/users/' . $user->id, [
+            ->patchJson(route('users.update', $user), [
                 'name' => 'New Name',
                 'email' => 'new@example.com',
             ]);
@@ -106,7 +106,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson('/api/users/' . $user->id, ['role' => 'Super Admin']);
+            ->patchJson(route('users.update', $user), ['role' => 'Super Admin']);
 
         $response->assertStatus(200)
             ->assertJsonPath('data.roles', ['Super Admin']);
@@ -123,7 +123,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson('/api/users/' . $user->id, ['email' => 'taken@example.com']);
+            ->patchJson(route('users.update', $user), ['email' => 'taken@example.com']);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
@@ -136,7 +136,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson('/api/users/' . $user->id, ['role' => 'NonExistent Role']);
+            ->patchJson(route('users.update', $user), ['role' => 'NonExistent Role']);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['role']);

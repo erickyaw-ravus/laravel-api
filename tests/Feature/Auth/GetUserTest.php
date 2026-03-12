@@ -19,7 +19,7 @@ class GetUserTest extends TestCase
         $token = $user->createToken('test-device')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson('/api/user');
+            ->getJson(route('user'));
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -38,7 +38,7 @@ class GetUserTest extends TestCase
 
     public function test_get_user_returns_401_when_unauthenticated(): void
     {
-        $response = $this->getJson('/api/user');
+        $response = $this->getJson(route('user'));
 
         $response->assertStatus(401)
             ->assertJson([
@@ -50,7 +50,7 @@ class GetUserTest extends TestCase
     public function test_get_user_returns_401_with_invalid_token(): void
     {
         $response = $this->withHeader('Authorization', 'Bearer invalid-token')
-            ->getJson('/api/user');
+            ->getJson(route('user'));
 
         $response->assertStatus(401)
             ->assertJson([

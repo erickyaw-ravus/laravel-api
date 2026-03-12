@@ -11,7 +11,7 @@ class ListRolesTest extends UserManagementTestCase
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson('/api/roles');
+            ->getJson(route('roles.index'));
 
         $response->assertForbidden();
     }
@@ -21,7 +21,7 @@ class ListRolesTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson('/api/roles');
+            ->getJson(route('roles.index'));
 
         $response->assertOk()
             ->assertJsonStructure([

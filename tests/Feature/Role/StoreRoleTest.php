@@ -12,7 +12,7 @@ class StoreRoleTest extends UserManagementTestCase
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson('/api/roles', ['name' => 'Manager']);
+            ->postJson(route('roles.store'), ['name' => 'Manager']);
 
         $response->assertForbidden();
     }
@@ -22,7 +22,7 @@ class StoreRoleTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson('/api/roles', ['name' => 'Manager']);
+            ->postJson(route('roles.store'), ['name' => 'Manager']);
 
         $response->assertStatus(201)
             ->assertJsonStructure(['success', 'message', 'data' => ['id', 'name']])
@@ -36,7 +36,7 @@ class StoreRoleTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson('/api/roles', []);
+            ->postJson(route('roles.store'), []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name']);
@@ -48,7 +48,7 @@ class StoreRoleTest extends UserManagementTestCase
         Role::create(['name' => 'Manager']);
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson('/api/roles', ['name' => 'Manager']);
+            ->postJson(route('roles.store'), ['name' => 'Manager']);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name']);
