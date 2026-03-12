@@ -3,6 +3,8 @@
 namespace App\Http\Responses;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Http\Response;
 
 class ApiResponse
@@ -30,6 +32,18 @@ class ApiResponse
         }
 
         return response()->json($payload, $status);
+    }
+
+    /**
+     * Return a successful JSON response for a paginated resource collection.
+     * Response shape: { success: true, data: [...], meta: {...}, links: {...} }
+     */
+    public static function successPaginated(ResourceCollection $collection, ?Request $request = null): JsonResponse
+    {
+        $request = $request ?? request();
+        $payload = array_merge(['success' => true], $collection->toArray($request));
+
+        return response()->json($payload);
     }
 
     /**

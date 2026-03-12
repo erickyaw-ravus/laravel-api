@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\Request;
@@ -27,4 +28,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     });
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/password/change', [AuthController::class, 'changePassword']);
+
+    // User management: list, show, store = Super Admin only; update = Super Admin or own profile
+    Route::middleware('role:Super Admin')->group(function (): void {
+        Route::get('users', [UserController::class, 'index']);
+        Route::get('users/{user}', [UserController::class, 'show']);
+        Route::post('users', [UserController::class, 'store']);
+    });
+    Route::patch('users/{user}', [UserController::class, 'update']);
+    Route::put('users/{user}', [UserController::class, 'update']);
 });

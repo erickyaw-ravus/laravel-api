@@ -19,6 +19,9 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'email_verified_at' => $this->email_verified_at,
+            'two_factor_enabled' => $this->two_factor_enabled,
+            'two_factor_method' => $this->two_factor_method,
+            'roles' => $this->getRoleNames(),
         ];
     }
 }
