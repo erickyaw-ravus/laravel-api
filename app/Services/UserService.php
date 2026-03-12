@@ -39,23 +39,36 @@ class UserService
     }
 
     /**
-     * Update an existing user. Only Super Admin can change role; others can update profile fields only.
+     * Update an existing user without changing the role.
      */
     public function update(User $user, array $data, User $updatedBy): User
     {
-        if (array_key_exists('role', $data)) {
-            if ($updatedBy->hasRole('Super Admin')) {
-                $user->syncRoles([$data['role']]);
-            }
-            unset($data['role']);
-        }
-
         $user->fill($data);
         $user->save();
 
         Log::info('User updated', [
             'user_id' => $user->id,
             'updated_by' => $updatedBy->id,
+        ]);
+
+        return $user;
+    }
+
+    /**
+     * Update a user's role. Only Super Admin should be able to call this.
+     */
+    public function updateRole(User $user, string $role, User $updatedBy): User
+    {
+        if (!$updatedBy->hasRole('Super Admin')) {
+            abort(403, 'Only Super Admin can update user roles.');
+        }
+
+        $user->syncRoles([$role]);
+
+        Log::info('User role updated', [
+            'user_id' => $user->id,
+            'updated_by' => $updatedBy->id,
+            'role' => $role,
         ]);
 
         return $user;

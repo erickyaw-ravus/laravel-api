@@ -57,7 +57,7 @@ class UpdateUserTest extends UserManagementTestCase
         $this->assertTrue($user->hasRole('User'));
     }
 
-    public function test_update_user_cannot_change_own_role_when_not_super_admin(): void
+    public function test_update_user_ignores_role_field_role_unchanged(): void
     {
         $user = User::factory()->create();
         $user->assignRole('User');
@@ -99,7 +99,7 @@ class UpdateUserTest extends UserManagementTestCase
         $this->assertSame('new@example.com', $user->email);
     }
 
-    public function test_update_user_syncs_role_when_super_admin(): void
+    public function test_update_user_does_not_change_role_even_when_super_admin_sends_role(): void
     {
         $user = User::factory()->create();
         $user->assignRole('User');
@@ -109,10 +109,10 @@ class UpdateUserTest extends UserManagementTestCase
             ->patchJson(route('users.update', $user), ['role' => 'Super Admin']);
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.roles', ['Super Admin']);
+            ->assertJsonPath('data.roles', ['User']);
         $user->refresh();
-        $this->assertTrue($user->hasRole('Super Admin'));
-        $this->assertFalse($user->hasRole('User'));
+        $this->assertTrue($user->hasRole('User'));
+        $this->assertFalse($user->hasRole('Super Admin'));
     }
 
     public function test_update_user_returns_422_when_email_taken_by_another_user(): void
@@ -129,16 +129,4 @@ class UpdateUserTest extends UserManagementTestCase
             ->assertJsonValidationErrors(['email']);
     }
 
-    public function test_update_user_returns_422_when_role_does_not_exist(): void
-    {
-        $user = User::factory()->create();
-        $user->assignRole('User');
-        $token = $this->actingAsSuperAdmin();
-
-        $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update', $user), ['role' => 'NonExistent Role']);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['role']);
-    }
 }

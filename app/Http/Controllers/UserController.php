@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Http\Requests\UpdateUserRoleRequest;
 use App\Http\Resources\UserCollection;
 use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
@@ -52,7 +53,7 @@ class UserController extends Controller
     }
 
     /**
-     * Update an existing user. Super Admin can change role; users can update their own profile.
+     * Update an existing user profile (no role changes).
      */
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
@@ -61,5 +62,15 @@ class UserController extends Controller
         $user = $this->userService->update($user, $request->validated(), $request->user());
 
         return ApiResponse::success(new UserResource($user), 'User updated');
+    }
+
+    /**
+     * Update a user's role. Only Super Admin can perform this action.
+     */
+    public function updateRole(UpdateUserRoleRequest $request, User $user): JsonResponse
+    {
+        $user = $this->userService->updateRole($user, $request->string('role')->toString(), $request->user());
+
+        return ApiResponse::success(new UserResource($user), 'User role updated');
     }
 }

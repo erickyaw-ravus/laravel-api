@@ -97,35 +97,7 @@ class UserServiceTest extends TestCase
         $this->assertSame('new@example.com', $updated->email);
     }
 
-    public function test_update_does_not_change_role_when_updater_is_not_super_admin(): void
-    {
-        $user = User::factory()->create();
-        $user->assignRole('User');
-        $updater = User::factory()->create();
-        $updater->assignRole('User');
-
-        $this->userService->update($user, ['role' => 'Super Admin'], $updater);
-
-        $user->refresh();
-        $this->assertTrue($user->hasRole('User'));
-        $this->assertFalse($user->hasRole('Super Admin'));
-    }
-
-    public function test_update_syncs_role_when_updater_is_super_admin(): void
-    {
-        $user = User::factory()->create();
-        $user->assignRole('User');
-        $superAdmin = User::factory()->create();
-        $superAdmin->assignRole('Super Admin');
-
-        $this->userService->update($user, ['role' => 'Super Admin'], $superAdmin);
-
-        $user->refresh();
-        $this->assertTrue($user->hasRole('Super Admin'));
-        $this->assertFalse($user->hasRole('User'));
-    }
-
-    public function test_update_strips_role_from_data_so_fill_does_not_complain(): void
+    public function test_update_never_changes_role_even_if_role_in_data(): void
     {
         $user = User::factory()->create(['name' => 'Alice']);
         $user->assignRole('User');
@@ -138,6 +110,37 @@ class UserServiceTest extends TestCase
         ], $superAdmin);
 
         $this->assertSame('Alice Updated', $updated->name);
+        $updated->refresh();
+        $this->assertTrue($updated->hasRole('User'));
+        $this->assertFalse($updated->hasRole('Super Admin'));
+    }
+
+    public function test_update_role_succeeds_when_updater_is_super_admin(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole('User');
+        $superAdmin = User::factory()->create();
+        $superAdmin->assignRole('Super Admin');
+
+        $updated = $this->userService->updateRole($user, 'Super Admin', $superAdmin);
+
+        $updated->refresh();
         $this->assertTrue($updated->hasRole('Super Admin'));
+        $this->assertFalse($updated->hasRole('User'));
+    }
+
+    public function test_update_role_returns_403_when_updater_is_not_super_admin(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole('User');
+        $updater = User::factory()->create();
+        $updater->assignRole('User');
+
+        try {
+            $this->userService->updateRole($user, 'Super Admin', $updater);
+            $this->fail('Expected HttpException was not thrown.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            $this->assertSame(403, $e->getStatusCode());
+        }
     }
 }

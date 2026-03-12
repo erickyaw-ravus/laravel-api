@@ -39,6 +39,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // Role management: list (no pagination), create
         Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
         Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+
+        // User role management: Super Admin only
+        Route::patch('users/{user}/role', [UserController::class, 'updateRole'])->name('users.update-role');
     });
     Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
 });
