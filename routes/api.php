@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Resources\UserResource;
@@ -39,6 +40,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // Role management: list (no pagination), create
         Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
         Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+
+        // Permission management: list all permissions
+        Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
 
         // User role management: Super Admin only
         Route::patch('users/{user}/role', [UserController::class, 'updateRole'])->name('users.update-role');
