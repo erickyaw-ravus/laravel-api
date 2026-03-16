@@ -8,7 +8,7 @@ class ListUsersTest extends UserManagementTestCase
 {
     public function test_list_users_returns_401_when_unauthenticated(): void
     {
-        $response = $this->getJson(route('users.index'));
+        $response = $this->getJson(route('users.view'));
 
         $response->assertStatus(401)
             ->assertJson(['success' => false]);
@@ -19,7 +19,7 @@ class ListUsersTest extends UserManagementTestCase
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson(route('users.index'));
+            ->getJson(route('users.view'));
 
         $response->assertStatus(403);
     }
@@ -30,7 +30,7 @@ class ListUsersTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson(route('users.index'));
+            ->getJson(route('users.view'));
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -50,7 +50,7 @@ class ListUsersTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson(route('users.index', ['per_page' => 2]));
+            ->getJson(route('users.view', ['per_page' => 2]));
 
         $response->assertStatus(200)
             ->assertJsonPath('meta.per_page', 2);

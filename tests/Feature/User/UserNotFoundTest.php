@@ -15,7 +15,7 @@ class UserNotFoundTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson(route('users.show', ['user' => self::NON_EXISTENT_USER_ID]));
+            ->getJson(route('users.detail', ['user' => self::NON_EXISTENT_USER_ID]));
 
         $response->assertStatus(404)
             ->assertJson([
@@ -32,7 +32,7 @@ class UserNotFoundTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update', ['user' => self::NON_EXISTENT_USER_ID]), [
+            ->patchJson(route('users.edit', ['user' => self::NON_EXISTENT_USER_ID]), [
                 'name' => 'Updated',
                 'email' => 'updated@example.com',
             ]);
@@ -52,7 +52,7 @@ class UserNotFoundTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update-role', ['user' => self::NON_EXISTENT_USER_ID]), ['role' => 'User']);
+            ->patchJson(route('users.edit-role', ['user' => self::NON_EXISTENT_USER_ID]), ['roles' => ['User']]);
 
         $response->assertStatus(404)
             ->assertJson([

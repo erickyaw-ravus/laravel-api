@@ -2,17 +2,25 @@
 
 namespace Tests\Feature\Role;
 
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Tests\Feature\User\UserManagementTestCase;
 
 class StoreRoleTest extends UserManagementTestCase
 {
+    public function test_store_role_returns_401_when_unauthenticated(): void
+    {
+        $response = $this->postJson(route('roles.create'), ['name' => 'Manager']);
+
+        $response->assertStatus(401)
+            ->assertJson(['success' => false]);
+    }
+
     public function test_store_role_returns_403_when_not_super_admin(): void
     {
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson(route('roles.store'), ['name' => 'Manager']);
+            ->postJson(route('roles.create'), ['name' => 'Manager']);
 
         $response->assertForbidden();
     }
@@ -22,7 +30,7 @@ class StoreRoleTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson(route('roles.store'), ['name' => 'Manager']);
+            ->postJson(route('roles.create'), ['name' => 'Manager']);
 
         $response->assertStatus(201)
             ->assertJsonStructure(['success', 'message', 'data' => ['id', 'name']])
@@ -36,7 +44,7 @@ class StoreRoleTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson(route('roles.store'), []);
+            ->postJson(route('roles.create'), []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name']);
@@ -48,7 +56,7 @@ class StoreRoleTest extends UserManagementTestCase
         Role::create(['name' => 'Manager']);
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson(route('roles.store'), ['name' => 'Manager']);
+            ->postJson(route('roles.create'), ['name' => 'Manager']);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name']);

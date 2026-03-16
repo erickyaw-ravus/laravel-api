@@ -5,10 +5,11 @@ namespace App\Services;
 use App\Exceptions\AuthException;
 use App\Mail\PasswordResetMail;
 use App\Mail\TwoFactorCodeMail;
+use App\Models\TwoFactorVerificationCode;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\Encryption\DecryptException;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -17,13 +18,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AuthService
 {
-    private const TWO_FACTOR_CACHE_PREFIX = '2fa:';
+    private const PASSWORD_RESET_TABLE = 'password_reset_tokens';
 
-    private const TWO_FACTOR_CODE_TTL_SECONDS = 10 * Carbon::SECONDS_PER_MINUTE; // 10 minutes
+    private const PASSWORD_RESET_TTL_MINUTES = 60;
 
-    private const PASSWORD_RESET_CACHE_PREFIX = 'password_reset:';
-
-    private const PASSWORD_RESET_TTL_SECONDS = 60 * Carbon::SECONDS_PER_MINUTE; // 60 minutes
+    private const TWO_FACTOR_CODE_TTL_MINUTES = 10;
 
     /**
      * Attempt login. Returns data for either token response or two-factor flow.
@@ -91,13 +90,17 @@ class AuthService
             throw new AuthException('User not found.', Response::HTTP_BAD_REQUEST);
         }
 
-        $cachedCode = Cache::get(self::TWO_FACTOR_CACHE_PREFIX.$user->id);
-        if ($cachedCode === null || $cachedCode !== $code) {
+        $record = TwoFactorVerificationCode::query()
+            ->where('user_id', $user->id)
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (! $record || ! Hash::check($code, $record->code)) {
             Log::warning('Two-factor verification failed: invalid or expired code', ['user_id' => $user->id]);
             throw new AuthException('Invalid or expired verification code.', Response::HTTP_BAD_REQUEST);
         }
 
-        Cache::forget(self::TWO_FACTOR_CACHE_PREFIX.$user->id);
+        $record->delete();
 
         $token = $user->createToken('api-token')->plainTextToken;
 
@@ -119,11 +122,14 @@ class AuthService
         }
 
         $token = Str::random(64);
-        $expiresAt = now()->addSeconds(self::PASSWORD_RESET_TTL_SECONDS)->timestamp;
-        Cache::put(
-            self::PASSWORD_RESET_CACHE_PREFIX.$token,
-            ['user_id' => $user->id, 'expires_at' => $expiresAt],
-            self::PASSWORD_RESET_TTL_SECONDS
+        $tokenHash = hash('sha256', $token);
+
+        DB::table(self::PASSWORD_RESET_TABLE)->updateOrInsert(
+            ['email' => $user->email],
+            [
+                'token' => $tokenHash,
+                'created_at' => now(),
+            ]
         );
 
         $frontendUrl = rtrim(config('app.frontend_url'), '/');
@@ -148,28 +154,34 @@ class AuthService
      */
     public function resetPassword(string $token, string $password): void
     {
-        $payload = Cache::get(self::PASSWORD_RESET_CACHE_PREFIX.$token);
+        $tokenHash = hash('sha256', $token);
+        $row = DB::table(self::PASSWORD_RESET_TABLE)
+            ->where('token', $tokenHash)
+            ->first();
 
-        if (! $payload || ! is_array($payload) || ! isset($payload['user_id'])) {
+        if (! $row) {
             throw new AuthException('Invalid or expired reset token.', Response::HTTP_BAD_REQUEST);
         }
 
-        if (isset($payload['expires_at']) && $payload['expires_at'] < time()) {
+        $createdAt = $row->created_at ? Carbon::parse($row->created_at) : null;
+        if (! $createdAt || $createdAt->addMinutes(self::PASSWORD_RESET_TTL_MINUTES)->isPast()) {
+            DB::table(self::PASSWORD_RESET_TABLE)->where('email', $row->email)->delete();
             throw new AuthException(
                 'Reset token has expired. Please request a new password reset link.',
                 Response::HTTP_BAD_REQUEST
             );
         }
 
-        $user = User::find($payload['user_id']);
+        $user = User::where('email', $row->email)->first();
         if (! $user) {
+            DB::table(self::PASSWORD_RESET_TABLE)->where('email', $row->email)->delete();
             throw new AuthException('Invalid or expired reset token.', Response::HTTP_BAD_REQUEST);
         }
 
         $user->password = $password;
         $user->save();
 
-        Cache::forget(self::PASSWORD_RESET_CACHE_PREFIX.$token);
+        DB::table(self::PASSWORD_RESET_TABLE)->where('email', $row->email)->delete();
 
         Log::info('Password reset completed', ['user_id' => $user->id]);
     }
@@ -201,7 +213,17 @@ class AuthService
     private function sendTwoFactorCodeAndReturnPayload(User $user): array
     {
         $code = (string) random_int(100000, 999999);
-        Cache::put(self::TWO_FACTOR_CACHE_PREFIX.$user->id, $code, self::TWO_FACTOR_CODE_TTL_SECONDS);
+        $expiresAt = now()->addMinutes(self::TWO_FACTOR_CODE_TTL_MINUTES);
+
+        TwoFactorVerificationCode::query()
+            ->where('user_id', $user->id)
+            ->delete();
+
+        TwoFactorVerificationCode::create([
+            'user_id' => $user->id,
+            'code' => Hash::make($code),
+            'expires_at' => $expiresAt,
+        ]);
 
         try {
             Mail::to($user)->send(new TwoFactorCodeMail($user, $code));
@@ -215,7 +237,7 @@ class AuthService
 
         $twoFactorToken = encrypt([
             'user_id' => $user->id,
-            'expires_at' => now()->addMinutes(10)->timestamp,
+            'expires_at' => $expiresAt->timestamp,
         ]);
 
         return [

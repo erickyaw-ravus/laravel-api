@@ -8,7 +8,7 @@ class StoreUserTest extends UserManagementTestCase
 {
     public function test_store_user_returns_401_when_unauthenticated(): void
     {
-        $response = $this->postJson(route('users.store'), [
+        $response = $this->postJson(route('users.create'), [
             'name' => 'New User',
             'email' => 'new@example.com',
             'password' => 'Password123!',
@@ -23,7 +23,7 @@ class StoreUserTest extends UserManagementTestCase
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson(route('users.store'), [
+            ->postJson(route('users.create'), [
                 'name' => 'New User',
                 'email' => 'new@example.com',
                 'password' => 'Password123!',
@@ -38,7 +38,7 @@ class StoreUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson(route('users.store'), [
+            ->postJson(route('users.create'), [
                 'name' => 'New User',
                 'email' => 'newuser@example.com',
                 'password' => 'Password123!',
@@ -64,7 +64,7 @@ class StoreUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson(route('users.store'), [
+            ->postJson(route('users.create'), [
                 'name' => 'New User',
                 'email' => 'existing@example.com',
                 'password' => 'Password123!',
@@ -80,7 +80,7 @@ class StoreUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson(route('users.store'), []);
+            ->postJson(route('users.create'), []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name', 'email', 'password']);
@@ -91,7 +91,7 @@ class StoreUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->postJson(route('users.store'), [
+            ->postJson(route('users.create'), [
                 'name' => 'New User',
                 'email' => 'new@example.com',
                 'password' => 'Password123!',

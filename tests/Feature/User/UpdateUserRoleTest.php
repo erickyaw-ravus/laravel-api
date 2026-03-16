@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\User;
 
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 
 class UpdateUserRoleTest extends UserManagementTestCase
@@ -11,7 +13,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
         $user = User::factory()->create();
         $user->assignRole('User');
 
-        $response = $this->patchJson(route('users.update-role', $user), ['role' => 'Super Admin']);
+        $response = $this->patchJson(route('users.edit-role', $user), ['roles' => ['Super Admin']]);
 
         $response->assertStatus(401);
     }
@@ -23,13 +25,93 @@ class UpdateUserRoleTest extends UserManagementTestCase
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update-role', $targetUser), ['role' => 'Super Admin']);
+            ->patchJson(route('users.edit-role', $targetUser), ['roles' => ['Super Admin']]);
 
         $response->assertStatus(403);
         $targetUser->refresh();
         $this->assertTrue($targetUser->hasRole('User'));
     }
 
+    /**
+     * User without users.edit-role cannot update even their own role (403 from permission middleware).
+     */
+    public function test_update_role_returns_403_when_user_lacks_users_edit_role_permission_even_own_profile(): void
+    {
+        $roleWithoutEditRole = Role::firstOrCreate(['name' => 'Viewer']);
+        $roleWithoutEditRole->syncPermissions([]);
+        $user = User::factory()->twoFactorDisabled()->create();
+        $user->assignRole('Viewer');
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withHeaders($this->authHeader($token))
+            ->patchJson(route('users.edit-role', $user), ['roles' => ['User']]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'You do not have permission to perform this action.',
+            ]);
+        $user->refresh();
+        $this->assertTrue($user->hasRole('Viewer'));
+    }
+
+    /**
+     * User with users.edit-role can update only their own role.
+     */
+    public function test_update_role_allows_user_with_users_edit_role_to_update_own_role(): void
+    {
+        $roleWithEditRole = Role::firstOrCreate(['name' => 'Manager']);
+        $roleWithEditRole->syncPermissions(
+            Permission::whereIn('name', ['users.edit-role'])->pluck('id')->all()
+        );
+        $user = User::factory()->twoFactorDisabled()->create();
+        $user->assignRole('Manager');
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withHeaders($this->authHeader($token))
+            ->patchJson(route('users.edit-role', $user), ['roles' => ['User']]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'User role updated',
+                'data' => [
+                    'id' => $user->id,
+                    'roles' => ['User'],
+                ],
+            ]);
+        $user->refresh();
+        $this->assertTrue($user->hasRole('User'));
+        $this->assertFalse($user->hasRole('Manager'));
+    }
+
+    /**
+     * User with users.edit-role cannot update another user's role (policy forbids).
+     */
+    public function test_update_role_returns_403_when_user_with_users_edit_role_updates_another_user(): void
+    {
+        $roleWithEditRole = Role::firstOrCreate(['name' => 'Manager']);
+        $roleWithEditRole->syncPermissions(
+            Permission::whereIn('name', ['users.edit-role'])->pluck('id')->all()
+        );
+        $editor = User::factory()->twoFactorDisabled()->create();
+        $editor->assignRole('Manager');
+        $targetUser = User::factory()->create();
+        $targetUser->assignRole('User');
+        $token = $editor->createToken('test')->plainTextToken;
+
+        $response = $this->withHeaders($this->authHeader($token))
+            ->patchJson(route('users.edit-role', $targetUser), ['roles' => ['Super Admin']]);
+
+        $response->assertStatus(403);
+        $targetUser->refresh();
+        $this->assertTrue($targetUser->hasRole('User'));
+        $this->assertFalse($targetUser->hasRole('Super Admin'));
+    }
+
+    /**
+     * Super admin can update any user's role.
+     */
     public function test_update_role_succeeds_when_super_admin(): void
     {
         $user = User::factory()->create();
@@ -37,7 +119,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update-role', $user), ['role' => 'Super Admin']);
+            ->patchJson(route('users.edit-role', $user), ['roles' => ['Super Admin']]);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -60,10 +142,10 @@ class UpdateUserRoleTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update-role', $user), ['role' => 'NonExistent Role']);
+            ->patchJson(route('users.edit-role', $user), ['roles' => ['NonExistent Role']]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['role']);
+            ->assertJsonValidationErrors(['roles.0']);
         $user->refresh();
         $this->assertTrue($user->hasRole('User'));
     }
@@ -75,9 +157,9 @@ class UpdateUserRoleTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update-role', $user), []);
+            ->patchJson(route('users.edit-role', $user), []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['role']);
+            ->assertJsonValidationErrors(['roles']);
     }
 }

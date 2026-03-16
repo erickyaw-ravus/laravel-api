@@ -106,7 +106,7 @@ class UserServiceTest extends TestCase
 
         $updated = $this->userService->update($user, [
             'name' => 'Alice Updated',
-            'role' => 'Super Admin',
+            'roles' => ['Super Admin'],
         ], $superAdmin);
 
         $this->assertSame('Alice Updated', $updated->name);
@@ -122,25 +122,28 @@ class UserServiceTest extends TestCase
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole('Super Admin');
 
-        $updated = $this->userService->updateRole($user, 'Super Admin', $superAdmin);
+        $updated = $this->userService->updateRole($user, ['Super Admin'], $superAdmin);
 
         $updated->refresh();
         $this->assertTrue($updated->hasRole('Super Admin'));
         $this->assertFalse($updated->hasRole('User'));
     }
 
-    public function test_update_role_returns_403_when_updater_is_not_super_admin(): void
+    /**
+     * Authorization for role updates is enforced by the permission middleware
+     * (users.edit-role). The service does not throw 403; see UpdateUserRoleTest
+     * for HTTP-level 403 when a non-authorized user hits the endpoint.
+     */
+    public function test_update_role_assigns_role_regardless_of_caller(): void
     {
         $user = User::factory()->create();
         $user->assignRole('User');
         $updater = User::factory()->create();
         $updater->assignRole('User');
 
-        try {
-            $this->userService->updateRole($user, 'Super Admin', $updater);
-            $this->fail('Expected HttpException was not thrown.');
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
-            $this->assertSame(403, $e->getStatusCode());
-        }
+        $updated = $this->userService->updateRole($user, ['Super Admin'], $updater);
+
+        $updated->refresh();
+        $this->assertTrue($updated->hasRole('Super Admin'));
     }
 }

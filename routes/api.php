@@ -21,7 +21,7 @@ Route::post('/password/reset', [AuthController::class, 'resetPassword'])->name('
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated routes
+| Authenticated routes (any logged-in user)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:sanctum')->group(function (): void {
@@ -30,22 +30,25 @@ Route::middleware('auth:sanctum')->group(function (): void {
     })->name('user');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/password/change', [AuthController::class, 'changePassword'])->name('password.change');
+});
 
-    // User management: list, show, store = Super Admin only; update = Super Admin or own profile
-    Route::middleware('role:Super Admin')->group(function (): void {
-        Route::get('users', [UserController::class, 'index'])->name('users.index');
-        Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
-        Route::post('users', [UserController::class, 'store'])->name('users.store');
+/*
+|--------------------------------------------------------------------------
+| Authenticated routes (permission required)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth:sanctum', 'permission'])->group(function (): void {
+    // User management
+    Route::get('users', [UserController::class, 'index'])->name('users.view');
+    Route::get('users/{user}', [UserController::class, 'show'])->name('users.detail');
+    Route::post('users', [UserController::class, 'store'])->name('users.create');
+    Route::patch('users/{user}', [UserController::class, 'update'])->name('users.edit');
+    Route::patch('users/{user}/role', [UserController::class, 'updateRole'])->name('users.edit-role');
 
-        // Role management: list (no pagination), create
-        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
-        Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+    // Role management
+    Route::get('roles', [RoleController::class, 'index'])->name('roles.view');
+    Route::post('roles', [RoleController::class, 'store'])->name('roles.create');
 
-        // Permission management: list all permissions
-        Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
-
-        // User role management: Super Admin only
-        Route::patch('users/{user}/role', [UserController::class, 'updateRole'])->name('users.update-role');
-    });
-    Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
+    // Permission management
+    Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.view');
 });

@@ -55,20 +55,19 @@ class UserService
     }
 
     /**
-     * Update a user's role. Only Super Admin should be able to call this.
+     * Update a user's roles. Replaces all existing roles with the given set.
+     * Only Super Admin should be able to call this (enforced by permission middleware).
+     *
+     * @param  string[]  $roles  Role names to assign
      */
-    public function updateRole(User $user, string $role, User $updatedBy): User
+    public function updateRole(User $user, array $roles, User $updatedBy): User
     {
-        if (!$updatedBy->hasRole('Super Admin')) {
-            abort(403, 'Only Super Admin can update user roles.');
-        }
+        $user->syncRoles($roles);
 
-        $user->syncRoles([$role]);
-
-        Log::info('User role updated', [
+        Log::info('User roles updated', [
             'user_id' => $user->id,
             'updated_by' => $updatedBy->id,
-            'role' => $role,
+            'roles' => $roles,
         ]);
 
         return $user;

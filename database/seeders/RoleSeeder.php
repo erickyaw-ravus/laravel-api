@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 
 class RoleSeeder extends Seeder
 {
@@ -13,7 +13,17 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        Role::create(['name' => 'Super Admin']);
-        Role::create(['name' => 'User']);
+        $this->call(PermissionSeeder::class);
+
+        $superAdmin = Role::firstOrCreate(['name' => 'Super Admin']);
+        $user = Role::firstOrCreate(['name' => 'User']);
+
+        // Super Admin gets all permissions (route-name based)
+        $superAdmin->syncPermissions(Permission::pluck('id')->all());
+
+        // User role: can edit own profile only (policy restricts to self)
+        $user->syncPermissions(
+            Permission::whereIn('name', ['users.edit'])->pluck('id')->all()
+        );
     }
 }

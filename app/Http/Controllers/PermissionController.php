@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PermissionResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\Permission;
 use Illuminate\Http\JsonResponse;
-use Spatie\Permission\Models\Permission;
 
 class PermissionController extends Controller
 {

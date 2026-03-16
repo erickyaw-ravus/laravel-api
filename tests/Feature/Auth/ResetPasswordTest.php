@@ -4,7 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -12,13 +12,18 @@ class ResetPasswordTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const PASSWORD_RESET_PREFIX = 'password_reset:';
+    private const PASSWORD_RESET_TABLE = 'password_reset_tokens';
 
     public function test_reset_password_succeeds_with_valid_token(): void
     {
         $user = User::factory()->twoFactorDisabled()->create(['email' => 'user@example.com']);
         $token = 'valid-reset-token-64-chars-long-enough-to-match-length-requirement';
-        Cache::put(self::PASSWORD_RESET_PREFIX . $token, ['user_id' => $user->id], 3600);
+        $tokenHash = hash('sha256', $token);
+        DB::table(self::PASSWORD_RESET_TABLE)->insert([
+            'email' => $user->email,
+            'token' => $tokenHash,
+            'created_at' => now(),
+        ]);
 
         $response = $this->postJson(route('password.reset'), [
             'token' => $token,
@@ -34,7 +39,7 @@ class ResetPasswordTest extends TestCase
 
         $user->refresh();
         $this->assertTrue(Hash::check('new-secret-123', $user->password));
-        $this->assertNull(Cache::get(self::PASSWORD_RESET_PREFIX . $token));
+        $this->assertNull(DB::table(self::PASSWORD_RESET_TABLE)->where('email', $user->email)->first());
     }
 
     public function test_reset_password_returns_400_for_invalid_token(): void
@@ -58,11 +63,12 @@ class ResetPasswordTest extends TestCase
     {
         $user = User::factory()->twoFactorDisabled()->create(['email' => 'user@example.com']);
         $token = 'expired-reset-token-64-chars-long-enough-to-match-length-requirement';
-
-        Cache::put(self::PASSWORD_RESET_PREFIX . $token, [
-            'user_id' => $user->id,
-            'expires_at' => now()->subMinutes(1)->timestamp,
-        ], 3600);
+        $tokenHash = hash('sha256', $token);
+        DB::table(self::PASSWORD_RESET_TABLE)->insert([
+            'email' => $user->email,
+            'token' => $tokenHash,
+            'created_at' => now()->subMinutes(61),
+        ]);
 
         $response = $this->postJson(route('password.reset'), [
             'token' => $token,
@@ -83,7 +89,12 @@ class ResetPasswordTest extends TestCase
     public function test_reset_password_returns_400_when_user_no_longer_exists(): void
     {
         $token = 'valid-reset-token-64-chars-long-enough-to-match-length-requirement';
-        Cache::put(self::PASSWORD_RESET_PREFIX . $token, ['user_id' => 99999], 3600);
+        $tokenHash = hash('sha256', $token);
+        DB::table(self::PASSWORD_RESET_TABLE)->insert([
+            'email' => 'deleted@example.com',
+            'token' => $tokenHash,
+            'created_at' => now(),
+        ]);
 
         $response = $this->postJson(route('password.reset'), [
             'token' => $token,
@@ -102,7 +113,12 @@ class ResetPasswordTest extends TestCase
     {
         $user = User::factory()->twoFactorDisabled()->create(['email' => 'user@example.com']);
         $token = 'valid-reset-token-64-chars-long-enough-to-match-length-requirement';
-        Cache::put(self::PASSWORD_RESET_PREFIX . $token, ['user_id' => $user->id], 3600);
+        $tokenHash = hash('sha256', $token);
+        DB::table(self::PASSWORD_RESET_TABLE)->insert([
+            'email' => $user->email,
+            'token' => $tokenHash,
+            'created_at' => now(),
+        ]);
 
         $response = $this->postJson(route('password.reset'), [
             'token' => $token,

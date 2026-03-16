@@ -5,10 +5,11 @@ namespace Tests\Unit\Services;
 use App\Exceptions\AuthException;
 use App\Mail\PasswordResetMail;
 use App\Mail\TwoFactorCodeMail;
+use App\Models\TwoFactorVerificationCode;
 use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,9 +21,7 @@ class AuthServiceTest extends TestCase
 
     private AuthService $authService;
 
-    private const PASSWORD_RESET_PREFIX = 'password_reset:';
-
-    private const TWO_FACTOR_PREFIX = '2fa:';
+    private const PASSWORD_RESET_TABLE = 'password_reset_tokens';
 
     protected function setUp(): void
     {
@@ -78,7 +77,7 @@ class AuthServiceTest extends TestCase
         $this->assertTrue($result['requires_two_factor'] ?? false);
         $this->assertArrayHasKey('two_factor_token', $result);
         $this->assertSame('Verification code sent to your email', $result['message']);
-        $this->assertNotNull(Cache::get(self::TWO_FACTOR_PREFIX.$user->id));
+        $this->assertNotNull(TwoFactorVerificationCode::query()->where('user_id', $user->id)->first());
 
         Mail::assertQueued(TwoFactorCodeMail::class, function (TwoFactorCodeMail $mail) use ($user): bool {
             return $mail->hasTo($user->email);
@@ -99,7 +98,6 @@ class AuthServiceTest extends TestCase
             'user_id' => $user->id,
             'expires_at' => now()->subMinutes(1)->timestamp,
         ]);
-        Cache::put(self::TWO_FACTOR_PREFIX.$user->id, '123456', 600);
 
         $this->expectException(AuthException::class);
         $this->expectExceptionMessage('Verification token has expired.');
@@ -113,14 +111,18 @@ class AuthServiceTest extends TestCase
             'user_id' => $user->id,
             'expires_at' => now()->addMinutes(10)->timestamp,
         ]);
-        Cache::put(self::TWO_FACTOR_PREFIX.$user->id, '123456', 600);
+        TwoFactorVerificationCode::create([
+            'user_id' => $user->id,
+            'code' => Hash::make('123456'),
+            'expires_at' => now()->addMinutes(10),
+        ]);
 
         $this->expectException(AuthException::class);
         $this->expectExceptionMessage('Invalid or expired verification code.');
         $this->authService->verifyTwoFactor($token, '000000');
     }
 
-    public function test_verify_two_factor_returns_token_and_user_and_forgets_cache(): void
+    public function test_verify_two_factor_returns_token_and_user_and_deletes_code(): void
     {
         $user = User::factory()->create();
         $token = encrypt([
@@ -128,14 +130,18 @@ class AuthServiceTest extends TestCase
             'expires_at' => now()->addMinutes(10)->timestamp,
         ]);
         $code = '123456';
-        Cache::put(self::TWO_FACTOR_PREFIX.$user->id, $code, 600);
+        TwoFactorVerificationCode::create([
+            'user_id' => $user->id,
+            'code' => Hash::make($code),
+            'expires_at' => now()->addMinutes(10),
+        ]);
 
         $result = $this->authService->verifyTwoFactor($token, $code);
 
         $this->assertArrayHasKey('token', $result);
         $this->assertArrayHasKey('user', $result);
         $this->assertSame($user->id, $result['user']->id);
-        $this->assertNull(Cache::get(self::TWO_FACTOR_PREFIX.$user->id));
+        $this->assertNull(TwoFactorVerificationCode::query()->where('user_id', $user->id)->first());
     }
 
     public function test_forgot_password_does_nothing_for_unknown_email(): void
@@ -174,7 +180,8 @@ class AuthServiceTest extends TestCase
         $this->assertArrayHasKey('token', $params);
         $token = is_string($params['token'] ?? null) ? $params['token'] : '';
         $this->assertNotSame('', $token, 'Reset link should contain a token');
-        $this->assertNotNull(Cache::get(self::PASSWORD_RESET_PREFIX . $token));
+        $tokenHash = hash('sha256', $token);
+        $this->assertNotNull(DB::table(self::PASSWORD_RESET_TABLE)->where('token', $tokenHash)->first());
     }
 
     public function test_reset_password_throws_for_invalid_token(): void
@@ -188,30 +195,34 @@ class AuthServiceTest extends TestCase
     {
         $user = User::factory()->twoFactorDisabled()->create();
         $token = 'my-token-64-chars-long-enough-to-match-requirement--------';
-        Cache::put(self::PASSWORD_RESET_PREFIX.$token, [
-            'user_id' => $user->id,
-            'expires_at' => now()->subMinutes(1)->timestamp,
-        ], 3600);
+        $tokenHash = hash('sha256', $token);
+        DB::table(self::PASSWORD_RESET_TABLE)->insert([
+            'email' => $user->email,
+            'token' => $tokenHash,
+            'created_at' => now()->subMinutes(61),
+        ]);
 
         $this->expectException(AuthException::class);
         $this->expectExceptionMessage('Reset token has expired.');
         $this->authService->resetPassword($token, 'newpassword123');
     }
 
-    public function test_reset_password_updates_password_and_forgets_token(): void
+    public function test_reset_password_updates_password_and_deletes_token(): void
     {
         $user = User::factory()->twoFactorDisabled()->create(['email' => 'user@example.com']);
         $token = 'my-token-64-chars-long-enough-to-match-requirement--------';
-        Cache::put(self::PASSWORD_RESET_PREFIX.$token, [
-            'user_id' => $user->id,
-            'expires_at' => now()->addHour()->timestamp,
-        ], 3600);
+        $tokenHash = hash('sha256', $token);
+        DB::table(self::PASSWORD_RESET_TABLE)->insert([
+            'email' => $user->email,
+            'token' => $tokenHash,
+            'created_at' => now(),
+        ]);
 
         $this->authService->resetPassword($token, 'newpassword123');
 
         $user->refresh();
         $this->assertTrue(Hash::check('newpassword123', $user->password));
-        $this->assertNull(Cache::get(self::PASSWORD_RESET_PREFIX.$token));
+        $this->assertNull(DB::table(self::PASSWORD_RESET_TABLE)->where('email', $user->email)->first());
     }
 
     public function test_change_password_updates_user_password(): void

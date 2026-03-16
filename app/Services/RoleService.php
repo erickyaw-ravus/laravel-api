@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Spatie\Permission\Models\Role;
 
 class RoleService
 {
@@ -24,11 +24,7 @@ class RoleService
      */
     public function store(string $name, User $createdBy): Role
     {
-        $guardName = config('auth.defaults.guard', 'web');
-        $role = Role::create([
-            'name' => $name,
-            'guard_name' => $guardName,
-        ]);
+        $role = Role::create(['name' => $name]);
 
         Log::info('Role created', [
             'role_id' => $role->id,

@@ -6,12 +6,20 @@ use Tests\Feature\User\UserManagementTestCase;
 
 class ListRolesTest extends UserManagementTestCase
 {
+    public function test_list_roles_returns_401_when_unauthenticated(): void
+    {
+        $response = $this->getJson(route('roles.view'));
+
+        $response->assertStatus(401)
+            ->assertJson(['success' => false]);
+    }
+
     public function test_list_roles_returns_403_when_not_super_admin(): void
     {
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson(route('roles.index'));
+            ->getJson(route('roles.view'));
 
         $response->assertForbidden();
     }
@@ -21,7 +29,7 @@ class ListRolesTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->getJson(route('roles.index'));
+            ->getJson(route('roles.view'));
 
         $response->assertOk()
             ->assertJsonStructure([

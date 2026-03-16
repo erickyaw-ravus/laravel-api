@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\User;
 
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 
 class UpdateUserTest extends UserManagementTestCase
@@ -11,7 +13,7 @@ class UpdateUserTest extends UserManagementTestCase
         $user = User::factory()->create();
         $user->assignRole('User');
 
-        $response = $this->patchJson(route('users.update', $user), ['name' => 'Updated Name']);
+        $response = $this->patchJson(route('users.edit', $user), ['name' => 'Updated Name']);
 
         $response->assertStatus(401);
     }
@@ -23,9 +25,51 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update', $otherUser), ['name' => 'Updated Name']);
+            ->patchJson(route('users.edit', $otherUser), ['name' => 'Updated Name']);
 
         $response->assertStatus(403);
+    }
+
+    /**
+     * User with users.edit can only edit their own profile; editing another user is forbidden.
+     */
+    public function test_update_user_returns_403_when_user_with_users_edit_edits_another_user(): void
+    {
+        $editor = User::factory()->twoFactorDisabled()->create();
+        $editor->assignRole('User'); // User role has users.edit
+        $targetUser = User::factory()->create(['name' => 'Other User']);
+        $targetUser->assignRole('User');
+        $token = $editor->createToken('test')->plainTextToken;
+
+        $response = $this->withHeaders($this->authHeader($token))
+            ->patchJson(route('users.edit', $targetUser), ['name' => 'Hacked']);
+
+        $response->assertStatus(403);
+        $targetUser->refresh();
+        $this->assertSame('Other User', $targetUser->name);
+    }
+
+    /**
+     * User without users.edit permission cannot edit even their own profile (403 from permission middleware).
+     */
+    public function test_update_user_returns_403_when_user_lacks_users_edit_permission_even_own_profile(): void
+    {
+        $roleWithoutEdit = Role::firstOrCreate(['name' => 'Viewer']);
+        $roleWithoutEdit->syncPermissions([]);
+        $user = User::factory()->twoFactorDisabled()->create(['name' => 'Me', 'email' => 'me@example.com']);
+        $user->assignRole('Viewer');
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withHeaders($this->authHeader($token))
+            ->patchJson(route('users.edit', $user), ['name' => 'Updated Me']);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'You do not have permission to perform this action.',
+            ]);
+        $user->refresh();
+        $this->assertSame('Me', $user->name);
     }
 
     public function test_update_user_allows_user_to_update_own_profile(): void
@@ -35,7 +79,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $user->createToken('test')->plainTextToken;
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update', $user), [
+            ->patchJson(route('users.edit', $user), [
                 'name' => 'New Name',
                 'email' => 'newemail@example.com',
             ]);
@@ -64,7 +108,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $user->createToken('test')->plainTextToken;
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update', $user), ['role' => 'Super Admin']);
+            ->patchJson(route('users.edit', $user), ['roles' => ['Super Admin']]);
 
         $response->assertStatus(200);
         $user->refresh();
@@ -79,7 +123,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update', $user), [
+            ->patchJson(route('users.edit', $user), [
                 'name' => 'New Name',
                 'email' => 'new@example.com',
             ]);
@@ -106,7 +150,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update', $user), ['role' => 'Super Admin']);
+            ->patchJson(route('users.edit', $user), ['roles' => ['Super Admin']]);
 
         $response->assertStatus(200)
             ->assertJsonPath('data.roles', ['User']);
@@ -123,7 +167,7 @@ class UpdateUserTest extends UserManagementTestCase
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.update', $user), ['email' => 'taken@example.com']);
+            ->patchJson(route('users.edit', $user), ['email' => 'taken@example.com']);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email']);

@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
 
 class PermissionSeeder extends Seeder
 {
@@ -13,31 +13,21 @@ class PermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        $guardName = config('auth.defaults.guard');
-
+        // Permission names match route names for routes using middleware('permission') (EnsureRoutePermission).
+        // Only routes in that group are checked; user, logout, password.change are auth-only and need no permission.
         $permissions = [
-            // Users
             'users.view',
+            'users.detail',
             'users.create',
-            'users.update',
-            'users.delete',
-
-            // Roles
+            'users.edit',
+            'users.edit-role',
             'roles.view',
             'roles.create',
-            'roles.update',
-            'roles.delete',
-            'roles.assign',
-
-            // Permissions (assign/sync)
             'permissions.view',
-            'permissions.assign',
         ];
 
         foreach ($permissions as $name) {
-            Permission::firstOrCreate(
-                ['name' => $name, 'guard_name' => $guardName]
-            );
+            Permission::firstOrCreate(['name' => $name]);
         }
     }
 }

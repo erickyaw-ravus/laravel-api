@@ -5,7 +5,6 @@ namespace Tests\Feature\Auth;
 use App\Mail\TwoFactorCodeMail;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -109,8 +108,6 @@ class VerifyTwoFactorTest extends TestCase
             'user_id' => $user->id,
             'expires_at' => now()->subMinutes(1)->timestamp,
         ]);
-
-        Cache::put('2fa:' . $user->id, '123456', 600);
 
         $response = $this->postJson(route('login.verify-two-factor'), [
             'two_factor_token' => $expiredToken,

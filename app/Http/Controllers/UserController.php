@@ -65,11 +65,13 @@ class UserController extends Controller
     }
 
     /**
-     * Update a user's role. Only Super Admin can perform this action.
+     * Update a user's role. Requires users.edit-role and own profile or Super Admin (same logic as update).
      */
     public function updateRole(UpdateUserRoleRequest $request, User $user): JsonResponse
     {
-        $user = $this->userService->updateRole($user, $request->string('role')->toString(), $request->user());
+        $this->authorize('updateRole', $user);
+
+        $user = $this->userService->updateRole($user, $request->validated('roles'), $request->user());
 
         return ApiResponse::success(new UserResource($user), 'User role updated');
     }
