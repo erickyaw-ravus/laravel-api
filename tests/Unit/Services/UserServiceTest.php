@@ -55,15 +55,16 @@ class UserServiceTest extends TestCase
         $this->assertCount(100, $result->items());
     }
 
-    public function test_store_creates_user_and_assigns_user_role(): void
+    public function test_store_creates_user_and_assigns_given_roles(): void
     {
         $creator = User::factory()->create();
-        $creator->assignRole('User');
+        $creator->assignRole('Management');
 
         $data = [
             'name' => 'New User',
             'email' => 'newuser@example.com',
             'password' => 'Password123!',
+            'roles' => ['Resident'],
         ];
 
         $user = $this->userService->store($data, $creator);
@@ -72,7 +73,7 @@ class UserServiceTest extends TestCase
             'email' => 'newuser@example.com',
             'name' => 'New User',
         ]);
-        $this->assertTrue($user->hasRole('User'));
+        $this->assertTrue($user->hasRole('Resident'));
     }
 
     public function test_update_updates_user_fields(): void
@@ -81,9 +82,9 @@ class UserServiceTest extends TestCase
             'name' => 'Old Name',
             'email' => 'old@example.com',
         ]);
-        $user->assignRole('User');
+        $user->assignRole('Resident');
         $updater = User::factory()->create();
-        $updater->assignRole('User');
+        $updater->assignRole('Resident');
 
         $updated = $this->userService->update($user, [
             'name' => 'New Name',
@@ -100,7 +101,7 @@ class UserServiceTest extends TestCase
     public function test_update_never_changes_role_even_if_role_in_data(): void
     {
         $user = User::factory()->create(['name' => 'Alice']);
-        $user->assignRole('User');
+        $user->assignRole('Resident');
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole('Super Admin');
 
@@ -111,14 +112,14 @@ class UserServiceTest extends TestCase
 
         $this->assertSame('Alice Updated', $updated->name);
         $updated->refresh();
-        $this->assertTrue($updated->hasRole('User'));
+        $this->assertTrue($updated->hasRole('Resident'));
         $this->assertFalse($updated->hasRole('Super Admin'));
     }
 
     public function test_update_role_succeeds_when_updater_is_super_admin(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('User');
+        $user->assignRole('Resident');
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole('Super Admin');
 
@@ -126,7 +127,7 @@ class UserServiceTest extends TestCase
 
         $updated->refresh();
         $this->assertTrue($updated->hasRole('Super Admin'));
-        $this->assertFalse($updated->hasRole('User'));
+        $this->assertFalse($updated->hasRole('Resident'));
     }
 
     /**
@@ -137,9 +138,9 @@ class UserServiceTest extends TestCase
     public function test_update_role_assigns_role_regardless_of_caller(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('User');
+        $user->assignRole('Resident');
         $updater = User::factory()->create();
-        $updater->assignRole('User');
+        $updater->assignRole('Resident');
 
         $updated = $this->userService->updateRole($user, ['Super Admin'], $updater);
 

@@ -9,7 +9,7 @@ class ShowUserTest extends UserManagementTestCase
     public function test_show_user_returns_401_when_unauthenticated(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('User');
+        $user->assignRole('Resident');
 
         $response = $this->getJson(route('users.detail', $user));
 
@@ -19,7 +19,7 @@ class ShowUserTest extends UserManagementTestCase
     public function test_show_user_returns_403_when_not_super_admin(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('User');
+        $user->assignRole('Resident');
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
@@ -31,7 +31,7 @@ class ShowUserTest extends UserManagementTestCase
     public function test_show_user_returns_user_detail_with_roles_when_super_admin(): void
     {
         $user = User::factory()->create(['name' => 'Alice', 'email' => 'alice@example.com']);
-        $user->assignRole('User');
+        $user->assignRole('Resident');
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
@@ -48,7 +48,7 @@ class ShowUserTest extends UserManagementTestCase
                     'id' => $user->id,
                     'name' => 'Alice',
                     'email' => 'alice@example.com',
-                    'roles' => ['User'],
+                    'roles' => ['Resident'],
                 ],
             ]);
     }

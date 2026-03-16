@@ -11,7 +11,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
     public function test_update_role_returns_401_when_unauthenticated(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('User');
+        $user->assignRole('Resident');
 
         $response = $this->patchJson(route('users.edit-role', $user), ['roles' => ['Super Admin']]);
 
@@ -21,7 +21,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
     public function test_update_role_returns_403_when_regular_user(): void
     {
         $targetUser = User::factory()->create();
-        $targetUser->assignRole('User');
+        $targetUser->assignRole('Resident');
         $token = $this->actingAsRegularUser();
 
         $response = $this->withHeaders($this->authHeader($token))
@@ -29,7 +29,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
 
         $response->assertStatus(403);
         $targetUser->refresh();
-        $this->assertTrue($targetUser->hasRole('User'));
+        $this->assertTrue($targetUser->hasRole('Resident'));
     }
 
     /**
@@ -44,7 +44,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
         $token = $user->createToken('test')->plainTextToken;
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.edit-role', $user), ['roles' => ['User']]);
+            ->patchJson(route('users.edit-role', $user), ['roles' => ['Resident']]);
 
         $response->assertStatus(403)
             ->assertJson([
@@ -69,7 +69,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
         $token = $user->createToken('test')->plainTextToken;
 
         $response = $this->withHeaders($this->authHeader($token))
-            ->patchJson(route('users.edit-role', $user), ['roles' => ['User']]);
+            ->patchJson(route('users.edit-role', $user), ['roles' => ['Resident']]);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -77,11 +77,11 @@ class UpdateUserRoleTest extends UserManagementTestCase
                 'message' => 'User role updated',
                 'data' => [
                     'id' => $user->id,
-                    'roles' => ['User'],
+                    'roles' => ['Resident'],
                 ],
             ]);
         $user->refresh();
-        $this->assertTrue($user->hasRole('User'));
+        $this->assertTrue($user->hasRole('Resident'));
         $this->assertFalse($user->hasRole('Manager'));
     }
 
@@ -97,7 +97,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
         $editor = User::factory()->twoFactorDisabled()->create();
         $editor->assignRole('Manager');
         $targetUser = User::factory()->create();
-        $targetUser->assignRole('User');
+        $targetUser->assignRole('Resident');
         $token = $editor->createToken('test')->plainTextToken;
 
         $response = $this->withHeaders($this->authHeader($token))
@@ -105,7 +105,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
 
         $response->assertStatus(403);
         $targetUser->refresh();
-        $this->assertTrue($targetUser->hasRole('User'));
+        $this->assertTrue($targetUser->hasRole('Resident'));
         $this->assertFalse($targetUser->hasRole('Super Admin'));
     }
 
@@ -115,7 +115,7 @@ class UpdateUserRoleTest extends UserManagementTestCase
     public function test_update_role_succeeds_when_super_admin(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('User');
+        $user->assignRole('Resident');
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
@@ -132,13 +132,13 @@ class UpdateUserRoleTest extends UserManagementTestCase
             ]);
         $user->refresh();
         $this->assertTrue($user->hasRole('Super Admin'));
-        $this->assertFalse($user->hasRole('User'));
+        $this->assertFalse($user->hasRole('Resident'));
     }
 
     public function test_update_role_returns_422_when_role_does_not_exist(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('User');
+        $user->assignRole('Resident');
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
@@ -147,13 +147,13 @@ class UpdateUserRoleTest extends UserManagementTestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['roles.0']);
         $user->refresh();
-        $this->assertTrue($user->hasRole('User'));
+        $this->assertTrue($user->hasRole('Resident'));
     }
 
     public function test_update_role_returns_422_when_role_missing(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('User');
+        $user->assignRole('Resident');
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))

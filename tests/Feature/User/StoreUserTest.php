@@ -13,6 +13,7 @@ class StoreUserTest extends UserManagementTestCase
             'email' => 'new@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            'roles' => ['Resident'],
         ]);
 
         $response->assertStatus(401);
@@ -28,12 +29,13 @@ class StoreUserTest extends UserManagementTestCase
                 'email' => 'new@example.com',
                 'password' => 'Password123!',
                 'password_confirmation' => 'Password123!',
+                'roles' => ['Resident'],
             ]);
 
         $response->assertStatus(403);
     }
 
-    public function test_store_user_creates_user_with_user_role_when_super_admin(): void
+    public function test_store_user_creates_user_with_resident_role_when_super_admin(): void
     {
         $token = $this->actingAsSuperAdmin();
 
@@ -43,6 +45,7 @@ class StoreUserTest extends UserManagementTestCase
                 'email' => 'newuser@example.com',
                 'password' => 'Password123!',
                 'password_confirmation' => 'Password123!',
+                'roles' => ['Resident'],
             ]);
 
         $response->assertStatus(201)
@@ -52,7 +55,7 @@ class StoreUserTest extends UserManagementTestCase
                 'data' => [
                     'name' => 'New User',
                     'email' => 'newuser@example.com',
-                    'roles' => ['User'],
+                    'roles' => ['Resident'],
                 ],
             ]);
         $this->assertDatabaseHas('users', ['email' => 'newuser@example.com']);
@@ -69,6 +72,7 @@ class StoreUserTest extends UserManagementTestCase
                 'email' => 'existing@example.com',
                 'password' => 'Password123!',
                 'password_confirmation' => 'Password123!',
+                'roles' => ['Resident'],
             ]);
 
         $response->assertStatus(422)
@@ -83,7 +87,7 @@ class StoreUserTest extends UserManagementTestCase
             ->postJson(route('users.create'), []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'email', 'password']);
+            ->assertJsonValidationErrors(['name', 'email', 'password', 'roles']);
     }
 
     public function test_store_user_returns_422_when_password_not_confirmed(): void
@@ -96,6 +100,7 @@ class StoreUserTest extends UserManagementTestCase
                 'email' => 'new@example.com',
                 'password' => 'Password123!',
                 'password_confirmation' => 'Different123!',
+                'roles' => ['Resident'],
             ]);
 
         $response->assertStatus(422)

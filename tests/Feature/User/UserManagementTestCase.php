@@ -28,7 +28,7 @@ abstract class UserManagementTestCase extends TestCase
     protected function actingAsRegularUser(): string
     {
         $user = User::factory()->twoFactorDisabled()->create();
-        $user->assignRole('User');
+        $user->assignRole('Resident');
 
         return $user->createToken('test')->plainTextToken;
     }

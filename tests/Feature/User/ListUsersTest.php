@@ -26,7 +26,7 @@ class ListUsersTest extends UserManagementTestCase
 
     public function test_list_users_returns_paginated_users_when_super_admin(): void
     {
-        User::factory()->count(3)->create()->each(fn (User $u) => $u->assignRole('User'));
+        User::factory()->count(3)->create()->each(fn (User $u) => $u->assignRole('Resident'));
         $token = $this->actingAsSuperAdmin();
 
         $response = $this->withHeaders($this->authHeader($token))
