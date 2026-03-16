@@ -47,7 +47,7 @@ class UserService
             'roles' => $roles,
         ]);
 
-        return $user;
+        return $user->load('roles');
     }
 
     /**
@@ -63,7 +63,7 @@ class UserService
             'updated_by' => $updatedBy->id,
         ]);
 
-        return $user;
+        return $user->load('roles');
     }
 
     /**
@@ -82,6 +82,6 @@ class UserService
             'roles' => $roles,
         ]);
 
-        return $user;
+        return $user->load('roles');
     }
 }

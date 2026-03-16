@@ -215,15 +215,13 @@ class AuthService
         $code = (string) random_int(100000, 999999);
         $expiresAt = now()->addMinutes(self::TWO_FACTOR_CODE_TTL_MINUTES);
 
-        TwoFactorVerificationCode::query()
-            ->where('user_id', $user->id)
-            ->delete();
-
-        TwoFactorVerificationCode::create([
-            'user_id' => $user->id,
-            'code' => Hash::make($code),
-            'expires_at' => $expiresAt,
-        ]);
+        TwoFactorVerificationCode::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'code' => Hash::make($code),
+                'expires_at' => $expiresAt,
+            ]
+        );
 
         try {
             Mail::to($user)->send(new TwoFactorCodeMail($user, $code));
