@@ -26,6 +26,16 @@ class RoleController extends Controller
     }
 
     /**
+     * List all roles with their permissions.
+     */
+    public function indexWithPermissions(): JsonResponse
+    {
+        $roles = $this->roleService->listWithPermissions();
+
+        return ApiResponse::success(RoleResource::collection($roles));
+    }
+
+    /**
      * Create a new role.
      */
     public function store(StoreRoleRequest $request): JsonResponse

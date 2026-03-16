@@ -20,6 +20,19 @@ class RoleService
     }
 
     /**
+     * List all roles with their permissions eager loaded.
+     *
+     * @return Collection<int, Role>
+     */
+    public function listWithPermissions(): Collection
+    {
+        return Role::query()
+            ->with('permissions')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
      * Create a new role.
      */
     public function store(string $name, User $createdBy): Role

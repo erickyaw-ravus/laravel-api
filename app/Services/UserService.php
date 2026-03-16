@@ -19,20 +19,32 @@ class UserService
     {
         $perPage = min(max($perPage, 1), self::MAX_PER_PAGE);
 
-        return User::query()->orderBy('id')->paginate($perPage);
+        return User::query()
+            ->with('roles')
+            ->orderBy('id')
+            ->paginate($perPage);
     }
 
     /**
-     * Create a new user and assign default role.
+     * Create a new user and assign the given roles.
+     *
+     * @param  array{name:string,email:string,password:string,roles:array<string>,two_factor_enabled?:bool,two_factor_method?:string|null}  $data
      */
     public function store(array $data, User $createdBy): User
     {
+        $roles = $data['roles'] ?? [];
+        unset($data['roles']);
+
         $user = User::create($data);
-        $user->assignRole('User');
+
+        if (! empty($roles)) {
+            $user->syncRoles($roles);
+        }
 
         Log::info('User created', [
             'user_id' => $user->id,
             'created_by' => $createdBy->id,
+            'roles' => $roles,
         ]);
 
         return $user;

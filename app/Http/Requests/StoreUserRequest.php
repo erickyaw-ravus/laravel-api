@@ -28,6 +28,8 @@ class StoreUserRequest extends FormRequest
             'password' => ['required', 'confirmed', Password::defaults()],
             'two_factor_enabled' => ['sometimes', 'boolean'],
             'two_factor_method' => ['sometimes', 'nullable', 'string', 'in:email'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', 'exists:roles,name'],
         ];
     }
 }

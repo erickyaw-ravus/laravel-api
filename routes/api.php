@@ -47,6 +47,7 @@ Route::middleware(['auth:sanctum', 'permission'])->group(function (): void {
 
     // Role management
     Route::get('roles', [RoleController::class, 'index'])->name('roles.view');
+    Route::get('roles/with-permissions', [RoleController::class, 'indexWithPermissions'])->name('roles.view-with-permissions');
     Route::post('roles', [RoleController::class, 'store'])->name('roles.create');
 
     // Permission management

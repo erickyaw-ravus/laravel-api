@@ -15,15 +15,15 @@ class RoleSeeder extends Seeder
     {
         $this->call(PermissionSeeder::class);
 
-        $superAdmin = Role::firstOrCreate(['name' => 'Super Admin']);
-        $user = Role::firstOrCreate(['name' => 'User']);
-
-        // Super Admin gets all permissions (route-name based)
-        $superAdmin->syncPermissions(Permission::pluck('id')->all());
-
-        // User role: can edit own profile only (policy restricts to self)
-        $user->syncPermissions(
+        Role::firstOrCreate(['name' => 'Super Admin']);
+        $management = Role::firstOrCreate(['name' => 'Management']);
+        $management->syncPermissions(
+            Permission::whereIn('name', ['users.view', 'users.detail', 'users.create', 'users.edit', 'users.edit-role', 'roles.view', 'roles.view-with-permissions', 'roles.create', 'permissions.view'])->pluck('id')->all()
+        );
+        $resident = Role::firstOrCreate(['name' => 'Resident']);
+        $resident->syncPermissions(
             Permission::whereIn('name', ['users.edit'])->pluck('id')->all()
         );
+        Role::firstOrCreate(['name' => 'Security']);
     }
 }
